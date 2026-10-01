@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "746388666496",
+    "project_id": "heliora-1ac96",
+    "storage_bucket": "heliora-1ac96.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:746388666496:android:1f92e51a402c0dd4bdce65",
+        "android_client_info": {
+          "package_name": "com.example.heliora"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCRQk7EMcxBbw4bYqAjai5AfhGrV_xqmLM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

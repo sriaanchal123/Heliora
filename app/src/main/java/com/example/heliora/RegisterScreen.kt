@@ -148,12 +148,48 @@ fun RegisterScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+            // Heliora Logo Header
+            Box(
+                modifier = Modifier
+                    .size(90.dp)
+                    .background(Color.White, CircleShape)
+                    .padding(14.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.heliora_logo),
+                    contentDescription = "Heliora Logo",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "HELIORA",
+                color = Color.White,
+                fontSize = 36.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 4.sp
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Create your account",
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 15.sp
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             // Profile Image Picker
             Box(
                 modifier = Modifier
-                    .size(120.dp)
+                    .size(90.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f))
+                    .background(Color.White.copy(alpha = 0.25f))
                     .clickable { showImageSourceDialog = true },
                 contentAlignment = Alignment.Center
             ) {
@@ -166,31 +202,13 @@ fun RegisterScreen(
                     )
                 } else {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
-                        Text("Add Photo", color = Color.White, fontSize = 12.sp)
+                        Icon(Icons.Default.AddAPhoto, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                        Text("Add Photo", color = Color.White, fontSize = 11.sp)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "HELIORA",
-                color = Color.White,
-                fontSize = 42.sp,
-                fontWeight = FontWeight.ExtraBold,
-                letterSpacing = 4.sp
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Create your account",
-                color = Color.White.copy(alpha = 0.8f),
-                fontSize = 16.sp
-            )
-
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(28.dp))
 
             // Name Field
             OutlinedTextField(

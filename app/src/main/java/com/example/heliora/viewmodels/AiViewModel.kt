@@ -18,8 +18,8 @@ class AiViewModel : ViewModel() {
         apiKey = apiKey
     )
 
-    private val _chatHistory = MutableStateFlow<List<ChatMessage>>(listOf(
-        ChatMessage("Hi! I am HelioRa AI. How can I help you with your health today?", false)
+    private val _chatHistory = MutableStateFlow(listOf(
+        ChatMessage(text = "Hi! I am HelioRa AI. How can I help you with your health today?", isUser = false)
     ))
     val chatHistory: StateFlow<List<ChatMessage>> = _chatHistory.asStateFlow()
 
@@ -29,7 +29,7 @@ class AiViewModel : ViewModel() {
     fun sendMessage(text: String) {
         if (text.isBlank()) return
 
-        val userMessage = ChatMessage(text, true)
+        val userMessage = ChatMessage(text = text, isUser = true)
         _chatHistory.value = _chatHistory.value + userMessage
 
         viewModelScope.launch {
@@ -38,13 +38,13 @@ class AiViewModel : ViewModel() {
                 if (apiKey.startsWith("AIzaSy")) {
                     val response = generativeModel.generateContent(text)
                     val aiResponseText = response.text ?: getSmartHealthFallback(text)
-                    _chatHistory.value = _chatHistory.value + ChatMessage(aiResponseText, false)
+                    _chatHistory.value = _chatHistory.value + ChatMessage(text = aiResponseText, isUser = false)
                 } else {
                     delay(800)
-                    _chatHistory.value = _chatHistory.value + ChatMessage(getSmartHealthFallback(text), false)
+                    _chatHistory.value = _chatHistory.value + ChatMessage(text = getSmartHealthFallback(text), isUser = false)
                 }
             } catch (e: Exception) {
-                _chatHistory.value = _chatHistory.value + ChatMessage(getSmartHealthFallback(text), false)
+                _chatHistory.value = _chatHistory.value + ChatMessage(text = getSmartHealthFallback(text), isUser = false)
             } finally {
                 _isLoading.value = false
             }

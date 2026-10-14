@@ -1,5 +1,6 @@
 package com.example.heliora.repository
 
+import android.util.Log
 import com.example.heliora.models.*
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -11,11 +12,14 @@ import kotlinx.coroutines.tasks.await
 class HealthcareRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
+    private val TAG = "HealthcareRepository"
+
     fun getDoctors(): Flow<List<Doctor>> = callbackFlow {
         val listener = firestore.collection("doctors")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.e(TAG, "Error fetching doctors: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val doctors = snapshot?.documents?.mapNotNull { it.toObject(Doctor::class.java)?.copy(id = it.id) } ?: emptyList()
@@ -28,7 +32,8 @@ class HealthcareRepository(
         val listener = firestore.collection("hospitals")
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.e(TAG, "Error fetching hospitals: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val hospitals = snapshot?.documents?.mapNotNull { it.toObject(Hospital::class.java)?.copy(id = it.id) } ?: emptyList()
@@ -52,7 +57,8 @@ class HealthcareRepository(
             .orderBy("createdAt", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.e(TAG, "Error fetching appointments: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val appointments = snapshot?.documents?.mapNotNull { it.toObject(Appointment::class.java)?.copy(id = it.id) } ?: emptyList()

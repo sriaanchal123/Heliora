@@ -1,5 +1,6 @@
 package com.example.heliora.repository
 
+import android.util.Log
 import com.example.heliora.models.FeedPost
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
@@ -11,12 +12,15 @@ import kotlinx.coroutines.tasks.await
 class FeedRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
+    private val TAG = "FeedRepository"
+
     fun getPosts(): Flow<List<FeedPost>> = callbackFlow {
         val listener = firestore.collection("posts")
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    close(error)
+                    Log.e(TAG, "Error fetching posts from Firestore: ${error.message}")
+                    trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val posts = snapshot?.documents?.mapNotNull { it.toObject(FeedPost::class.java)?.copy(id = it.id) } ?: emptyList()

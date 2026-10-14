@@ -32,6 +32,10 @@ class FeedViewModel(
                 }
                 _isLoading.value = false 
             }
+            .catch { e -> 
+                _posts.value = getSamplePosts()
+                _isLoading.value = false
+            }
             .launchIn(viewModelScope)
     }
 
@@ -45,7 +49,6 @@ class FeedViewModel(
             "Health Tip: Stay hydrated and get at least 7 hours of sleep for better mental clarity.",
             "Proud to be part of the HelioRa network, making healthcare accessible to all."
         )
-        // Using existing drawables
         val drawables = listOf(
             com.example.heliora.R.drawable.img_1,
             com.example.heliora.R.drawable.doctor,

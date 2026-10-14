@@ -10,8 +10,10 @@
     </item>
     <item
         android:gravity="center"
-        android:top="20dp"
-        android:bottom="-28dp">
+        android:top="18dp"
+        android:bottom="-26dp"
+        android:left="6dp"
+        android:right="6dp">
         <bitmap
             android:gravity="top|center_horizontal"
             android:src="@drawable/heliora_logo" />

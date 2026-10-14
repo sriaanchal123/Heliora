@@ -21,8 +21,11 @@ class AuthRepository(
 
     suspend fun registerUser(name: String, email: String, password: String, role: String, imageUri: Uri? = null): Result<FirebaseUser?> {
         return try {
-            Log.d(TAG, "Attempting to create user: $email")
-            val authResult = auth.createUserWithEmailAndPassword(email, password).await()
+            val cleanEmail = email.trim().lowercase()
+            val cleanName = name.trim()
+            Log.d(TAG, "Attempting to create user: $cleanEmail")
+            
+            val authResult = auth.createUserWithEmailAndPassword(cleanEmail, password).await()
             val user = authResult.user
             Log.d(TAG, "User created successfully: ${user?.uid}")
             
@@ -37,9 +40,9 @@ class AuthRepository(
                 }
             }
 
-            // Update Firebase Profile with name and photo
+            // Update Firebase Auth Profile
             val profileUpdates = userProfileChangeRequest {
-                displayName = name
+                displayName = cleanName
                 if (profileImageUrl.isNotEmpty()) {
                     photoUri = Uri.parse(profileImageUrl)
                 }
@@ -48,19 +51,35 @@ class AuthRepository(
             Log.d(TAG, "Firebase profile updated")
             
             val userMap = hashMapOf(
-                "name" to name,
-                "email" to email,
+                "name" to cleanName,
+                "email" to cleanEmail,
                 "role" to role,
                 "uid" to user?.uid,
                 "profileImageUrl" to profileImageUrl
             )
             
             Log.d(TAG, "Saving user to Firestore")
-            firestore.collection("users")
-                .document(email)
-                .set(userMap)
-                .await()
-            Log.d(TAG, "User saved to Firestore successfully")
+            try {
+                firestore.collection("users")
+                    .document(cleanEmail)
+                    .set(userMap)
+                    .await()
+                Log.d(TAG, "User saved to Firestore by email successfully")
+            } catch (fsError: Exception) {
+                Log.e(TAG, "Firestore email save error: ${fsError.message}")
+            }
+
+            if (user?.uid != null) {
+                try {
+                    firestore.collection("users")
+                        .document(user.uid)
+                        .set(userMap)
+                        .await()
+                    Log.d(TAG, "User saved to Firestore by UID successfully")
+                } catch (fsError2: Exception) {
+                    Log.e(TAG, "Firestore UID save error: ${fsError2.message}")
+                }
+            }
                 
             Result.success(user)
         } catch (e: Exception) {
@@ -71,19 +90,28 @@ class AuthRepository(
 
     suspend fun loginUser(email: String, password: String): Result<Pair<FirebaseUser?, String>> {
         return try {
-            Log.d(TAG, "Attempting login for: $email")
-            val authResult = auth.signInWithEmailAndPassword(email, password).await()
+            val cleanEmail = email.trim().lowercase()
+            Log.d(TAG, "Attempting login for: $cleanEmail")
+            
+            val authResult = auth.signInWithEmailAndPassword(cleanEmail, password).await()
             val user = authResult.user
             
-            // Fetch name from Firestore
-            val name = firestore.collection("users")
-                .document(email)
-                .get()
-                .await()
-                .getString("name") ?: user?.displayName ?: "User"
+            var name = user?.displayName
+            try {
+                val doc = firestore.collection("users").document(cleanEmail).get().await()
+                if (doc.exists()) {
+                    name = doc.getString("name") ?: name
+                } else if (user?.uid != null) {
+                    val uidDoc = firestore.collection("users").document(user.uid).get().await()
+                    name = uidDoc.getString("name") ?: name
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Could not fetch name from Firestore: ${e.message}")
+            }
             
-            Log.d(TAG, "Login successful: $name")
-            Result.success(Pair(user, name))
+            val finalName = if (!name.isNullOrBlank()) name else "User"
+            Log.d(TAG, "Login successful: $finalName")
+            Result.success(Pair(user, finalName))
         } catch (e: Exception) {
             Log.e(TAG, "Login failed: ${e.message}")
             Result.failure(e)

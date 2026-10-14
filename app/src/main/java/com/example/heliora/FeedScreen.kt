@@ -777,85 +777,70 @@ fun FeedContent(
 }
 
 @Composable
-fun PostImageGrid(images: List<Int>) {
-    if (images.isEmpty()) return
-    
+fun PostImageGrid(imageResList: List<Int> = emptyList(), imageUrls: List<String> = emptyList()) {
+    val totalCount = if (imageUrls.isNotEmpty()) imageUrls.size else imageResList.size
+    if (totalCount == 0) return
+
     val modifier = Modifier
         .fillMaxWidth()
         .height(300.dp)
         .padding(vertical = 4.dp)
-        
-    when (images.size) {
-        1 -> {
-            Image(
-                painter = painterResource(id = images[0]),
+
+    val isCloud = imageUrls.isNotEmpty()
+
+    @Composable
+    fun RenderImage(index: Int, imgModifier: Modifier) {
+        if (isCloud) {
+            AsyncImage(
+                model = imageUrls[index],
                 contentDescription = null,
-                modifier = modifier,
+                modifier = imgModifier,
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Image(
+                painter = painterResource(id = imageResList[index]),
+                contentDescription = null,
+                modifier = imgModifier,
                 contentScale = ContentScale.Crop
             )
         }
+    }
+
+    when (totalCount) {
+        1 -> RenderImage(0, modifier)
         2 -> {
             Row(modifier = modifier) {
-                Image(
-                    painter = painterResource(id = images[0]),
-                    contentDescription = null,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    contentScale = ContentScale.Crop
-                )
+                RenderImage(0, Modifier.weight(1f).fillMaxHeight())
                 Spacer(modifier = Modifier.width(2.dp))
-                Image(
-                    painter = painterResource(id = images[1]),
-                    contentDescription = null,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                    contentScale = ContentScale.Crop
-                )
+                RenderImage(1, Modifier.weight(1f).fillMaxHeight())
             }
         }
         3 -> {
             Row(modifier = modifier) {
-                Image(
-                    painter = painterResource(id = images[0]),
-                    contentDescription = null,
-                    modifier = Modifier.weight(1.2f).fillMaxHeight(),
-                    contentScale = ContentScale.Crop
-                )
+                RenderImage(0, Modifier.weight(1.2f).fillMaxHeight())
                 Spacer(modifier = Modifier.width(2.dp))
                 Column(modifier = Modifier.weight(0.8f).fillMaxHeight()) {
-                    Image(
-                        painter = painterResource(id = images[1]),
-                        contentDescription = null,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentScale = ContentScale.Crop
-                    )
+                    RenderImage(1, Modifier.weight(1f).fillMaxWidth())
                     Spacer(modifier = Modifier.height(2.dp))
-                    Image(
-                        painter = painterResource(id = images[2]),
-                        contentDescription = null,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                        contentScale = ContentScale.Crop
-                    )
+                    RenderImage(2, Modifier.weight(1f).fillMaxWidth())
                 }
             }
         }
         else -> {
-            val pagerState = rememberPagerState(pageCount = { images.size })
+            val pagerState = rememberPagerState(pageCount = { totalCount })
             Box(modifier = modifier) {
                 HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                    Image(
-                        painter = painterResource(id = images[page]),
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    RenderImage(page, Modifier.fillMaxSize())
                 }
-                if (images.size > 1) {
+                if (totalCount > 1) {
                     Surface(
                         modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
                         color = Color.Black.copy(alpha = 0.6f),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "${pagerState.currentPage + 1}/${images.size}",
+                            text = "${pagerState.currentPage + 1}/$totalCount",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             color = Color.White,
                             fontSize = 12.sp
@@ -912,7 +897,7 @@ fun FeedPostItem(post: FeedPost, onAction: (String) -> Unit, onLike: () -> Unit)
                 lineHeight = 20.sp
             )
             
-            PostImageGrid(post.imageResList)
+            PostImageGrid(post.imageResList, post.imageUrls)
 
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.ThumbUp, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(12.dp))
@@ -1448,55 +1433,57 @@ fun CreatePostScreen(
     viewModel: FeedViewModel = viewModel()
 ) {
     var postText by remember { mutableStateOf("") }
-    var attachPhotos by remember { mutableStateOf(false) }
-    
+    var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var isPosting by remember { mutableStateOf(false) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+        onResult = { uris ->
+            if (uris.isNotEmpty()) {
+                selectedImageUris = uris
+            }
+        }
+    )
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Create Post", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = onBack, enabled = !isPosting) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
                     }
                 },
                 actions = {
-                    Button(
-                        onClick = {
-                            if (postText.isNotBlank()) {
-                                if (attachPhotos) {
-                                    val photos = listOf(R.drawable.img_1, R.drawable.doctor, R.drawable.hospital)
-                                    photos.forEach { resId ->
-                                        val p = FeedPost(
-                                            authorName = currentUserName,
-                                            authorRole = currentUserRole,
-                                            authorImageUrl = currentUserPhoto,
-                                            content = postText,
-                                            timestamp = System.currentTimeMillis(),
-                                            imageResList = listOf(resId)
-                                        )
-                                        viewModel.createPost(p)
-                                    }
-                                    onAction("3 separate posts created!")
-                                } else {
+                    if (isPosting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp).padding(end = 12.dp),
+                            color = Color(0xFF2563EB),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Button(
+                            onClick = {
+                                if (postText.isNotBlank()) {
+                                    isPosting = true
                                     val newPost = FeedPost(
                                         authorName = currentUserName,
                                         authorRole = currentUserRole,
                                         authorImageUrl = currentUserPhoto,
                                         content = postText,
-                                        timestamp = System.currentTimeMillis(),
-                                        imageResList = emptyList()
+                                        timestamp = System.currentTimeMillis()
                                     )
-                                    viewModel.createPost(newPost)
-                                    onAction("Post successful")
+                                    viewModel.createPost(newPost, selectedImageUris)
+                                    onAction("Post published to Cloud Feed!")
+                                    onBack()
                                 }
-                                onBack()
-                            }
-                        },
-                        enabled = postText.isNotBlank(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Text("Post")
+                            },
+                            enabled = postText.isNotBlank() && !isPosting,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB)),
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text("Post")
+                        }
                     }
                 }
             )
@@ -1542,26 +1529,41 @@ fun CreatePostScreen(
                 textStyle = LocalTextStyle.current.copy(fontSize = 18.sp)
             )
 
-            if (attachPhotos) {
-                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(R.drawable.img_1, R.drawable.doctor, R.drawable.hospital).forEach { resId ->
-                        Image(
-                            painter = painterResource(id = resId),
-                            contentDescription = null,
-                            modifier = Modifier.size(80.dp).clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Crop
-                        )
+            if (selectedImageUris.isNotEmpty()) {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(selectedImageUris) { uri ->
+                        Box(modifier = Modifier.size(90.dp).clip(RoundedCornerShape(8.dp))) {
+                            AsyncImage(
+                                model = uri,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            IconButton(
+                                onClick = { selectedImageUris = selectedImageUris - uri },
+                                modifier = Modifier.align(Alignment.TopEnd).size(24.dp).background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Remove", tint = Color.White, modifier = Modifier.size(14.dp))
+                            }
+                        }
                     }
                 }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                IconButton(onClick = { attachPhotos = !attachPhotos }) {
-                    Icon(Icons.Default.Image, contentDescription = "Add Media", tint = if(attachPhotos) Color(0xFF2563EB) else Color.Gray)
+                IconButton(onClick = {
+                    photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }) {
+                    Icon(Icons.Default.Image, contentDescription = "Add Media", tint = if (selectedImageUris.isNotEmpty()) Color(0xFF2563EB) else Color.Gray)
                 }
-                IconButton(onClick = { }) { Icon(Icons.Default.CameraAlt, contentDescription = "Camera", tint = Color.Gray) }
-                IconButton(onClick = { }) { Icon(Icons.Default.Event, contentDescription = "Event", tint = Color.Gray) }
-                IconButton(onClick = { }) { Icon(Icons.Default.MoreHoriz, contentDescription = "More", tint = Color.Gray) }
+                IconButton(onClick = {
+                    photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }) { 
+                    Icon(Icons.Default.CameraAlt, contentDescription = "Camera", tint = Color.Gray) 
+                }
             }
         }
     }

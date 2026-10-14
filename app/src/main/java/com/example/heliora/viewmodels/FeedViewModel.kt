@@ -1,5 +1,6 @@
 package com.example.heliora.viewmodels
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.heliora.models.FeedPost
@@ -32,7 +33,7 @@ class FeedViewModel(
                 }
                 _isLoading.value = false 
             }
-            .catch { e -> 
+            .catch {
                 _posts.value = getSamplePosts()
                 _isLoading.value = false
             }
@@ -71,9 +72,9 @@ class FeedViewModel(
         }
     }
 
-    fun createPost(post: FeedPost) {
+    fun createPost(post: FeedPost, imageUris: List<Uri> = emptyList()) {
         viewModelScope.launch {
-            repository.createPost(post)
+            repository.createPost(post, imageUris)
         }
     }
 

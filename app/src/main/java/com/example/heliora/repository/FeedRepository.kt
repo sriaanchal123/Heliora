@@ -1,16 +1,20 @@
 package com.example.heliora.repository
 
+import android.net.Uri
 import android.util.Log
 import com.example.heliora.models.FeedPost
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import java.util.UUID
 
 class FeedRepository(
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val storage: FirebaseStorage = FirebaseStorage.getInstance()
 ) {
     private val TAG = "FeedRepository"
 
@@ -29,11 +33,29 @@ class FeedRepository(
         awaitClose { listener.remove() }
     }
 
-    suspend fun createPost(post: FeedPost): Result<String> {
+    suspend fun createPost(post: FeedPost, imageUris: List<Uri> = emptyList()): Result<String> {
         return try {
-            val docRef = firestore.collection("posts").add(post).await()
+            val uploadedUrls = mutableListOf<String>()
+            
+            // Upload selected photos to Firebase Storage
+            for (uri in imageUris) {
+                try {
+                    val photoId = UUID.randomUUID().toString()
+                    val ref = storage.reference.child("post_images/$photoId.jpg")
+                    ref.putFile(uri).await()
+                    val downloadUrl = ref.downloadUrl.await().toString()
+                    uploadedUrls.add(downloadUrl)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to upload post image: ${e.message}")
+                }
+            }
+
+            val finalPost = post.copy(imageUrls = uploadedUrls)
+            val docRef = firestore.collection("posts").add(finalPost).await()
+            Log.d(TAG, "Post created successfully in Firestore: ${docRef.id}")
             Result.success(docRef.id)
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to create post: ${e.message}")
             Result.failure(e)
         }
     }

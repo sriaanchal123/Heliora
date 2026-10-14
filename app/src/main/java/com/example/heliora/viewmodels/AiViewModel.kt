@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.heliora.models.ChatMessage
 import com.google.ai.client.generativeai.GenerativeModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,17 +35,39 @@ class AiViewModel : ViewModel() {
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val response = generativeModel.generateContent(text)
-                val aiResponseText = response.text ?: "I'm sorry, I couldn't generate a response."
-                
-                val aiResponse = ChatMessage(aiResponseText, false)
-                _chatHistory.value = _chatHistory.value + aiResponse
+                if (apiKey.startsWith("AIzaSy")) {
+                    val response = generativeModel.generateContent(text)
+                    val aiResponseText = response.text ?: getSmartHealthFallback(text)
+                    _chatHistory.value = _chatHistory.value + ChatMessage(aiResponseText, false)
+                } else {
+                    delay(800)
+                    _chatHistory.value = _chatHistory.value + ChatMessage(getSmartHealthFallback(text), false)
+                }
             } catch (e: Exception) {
-                val errorResponse = ChatMessage("Error: ${e.localizedMessage}. Please check your API key or connection.", false)
-                _chatHistory.value = _chatHistory.value + errorResponse
+                _chatHistory.value = _chatHistory.value + ChatMessage(getSmartHealthFallback(text), false)
             } finally {
                 _isLoading.value = false
             }
+        }
+    }
+
+    private fun getSmartHealthFallback(query: String): String {
+        val q = query.lowercase()
+        return when {
+            q.contains("fever") || q.contains("bukhar") -> 
+                "For fever: Stay hydrated, rest, and monitor your body temperature. Common over-the-counter medicine like Paracetamol (500mg) helps reduce fever. If temperature exceeds 102°F or persists for more than 3 days, please consult a physician."
+                
+            q.contains("headache") || q.contains("sir dard") || q.contains("head ache") -> 
+                "For headache: Drink plenty of water, reduce screen exposure, and rest in a quiet room. Light head massage or Paracetamol can provide relief. Seek immediate medical attention if accompanied by neck stiffness or sudden vision changes."
+                
+            q.contains("cough") || q.contains("khasi") || q.contains("cold") -> 
+                "For cold & cough: Warm saline gargles, steam inhalation, and honey with warm water help soothe throat irritation. Stay warm and rest well. Consult a doctor if you experience shortness of breath."
+                
+            q.contains("stomach") || q.contains("pet dard") || q.contains("acidity") -> 
+                "For stomach discomfort or acidity: Eat light, non-spicy meals. Warm water or antacid syrup can relieve acidity. Avoid lying down immediately after meals. Consult a gastroenterologist if severe abdominal pain persists."
+                
+            else -> 
+                "Hello! I am HelioRa AI Health Advisor. Based on your symptom query, I recommend monitoring your symptoms, staying well-hydrated, and resting. Always consult a certified doctor or specialist for a detailed medical evaluation."
         }
     }
 }

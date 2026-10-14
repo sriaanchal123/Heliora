@@ -194,6 +194,7 @@ fun MainFeedScreen(loggedInEmail: String, initialName: String = "User", onLogout
             }
         )
         "notifications" -> NotificationsScreen(onBack = { currentSubScreen = null })
+        "medical_records" -> MedicalRecordsScreen(loggedInEmail = loggedInEmail, onBack = { currentSubScreen = null })
         "jobs" -> JobsScreen(onBack = { currentSubScreen = null })
         "pharmacy" -> PharmacyScreen(onBack = { currentSubScreen = null })
         "communities" -> CommunitiesScreen(onBack = { currentSubScreen = null })
@@ -291,7 +292,10 @@ fun MainFeedScreen(loggedInEmail: String, initialName: String = "User", onLogout
                                 scope.launch { drawerState.close() }
                                 currentSubScreen = "user_profile"
                             }
-                            DrawerMenuItem(Icons.Default.Description, "Medical Records") { scope.launch { drawerState.close() } }
+                            DrawerMenuItem(Icons.Default.Description, "Medical Records") { 
+                                scope.launch { drawerState.close() }
+                                currentSubScreen = "medical_records"
+                            }
                             DrawerMenuItem(Icons.Default.Settings, "Settings") { scope.launch { drawerState.close() } }
                             DrawerMenuItem(Icons.AutoMirrored.Filled.HelpOutline, "Help & Support") { scope.launch { drawerState.close() } }
                             

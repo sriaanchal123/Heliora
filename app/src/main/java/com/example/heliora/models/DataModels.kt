@@ -89,3 +89,14 @@ data class BloodRequest(
     val isUrgent: Boolean = true,
     val timestamp: Long = System.currentTimeMillis()
 )
+
+data class MedicalRecord(
+    val id: String = "",
+    val userId: String = "",
+    val title: String = "",
+    val category: String = "Prescription",
+    val doctorName: String = "",
+    val date: String = "",
+    val fileUrl: String = "",
+    val timestamp: Long = System.currentTimeMillis()
+)
